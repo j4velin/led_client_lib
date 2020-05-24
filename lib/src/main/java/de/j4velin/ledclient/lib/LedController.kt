@@ -11,7 +11,15 @@ private val mediaType = "application/json; charset=utf-8".toMediaType()
 
 val TAG = "LedClient.Lib"
 
+/**
+ * @param serverUrl the complete http url of the LEDserver (incl. port)
+ */
 class LedController(private val serverUrl: String) {
+
+    /**
+     * Sends the command to trigger the given effect to the LEDserver
+     * @param effect the effect to trigger
+     */
     fun trigger(effect: LedEffect) {
         Thread {
 

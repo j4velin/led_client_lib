@@ -4,10 +4,26 @@ import android.graphics.Color
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 
+/**
+ * Base class for all effect.
+ *
+ * @param name the effect name. The name must be equal to the effect name in the LEDserver
+ * instance (e.g. effect_kitt.py --> effect name = "kitt")
+ */
 abstract class LedEffect(val name: String) {
+
+    /**
+     * @return the json representation of this effect
+     */
     abstract fun toJSON(): JsonObject
 }
 
+/**
+ * Converts the given color into a rgb color array
+ *
+ * @param color the color
+ * @return a rgb color array which can be sent to the LEDserver
+ */
 fun colorToArray(color: Int): JsonArray {
     val array = JsonArray()
     array.add(Color.red(color))
