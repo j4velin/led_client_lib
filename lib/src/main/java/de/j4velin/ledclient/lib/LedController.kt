@@ -9,7 +9,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 private val okHttp = OkHttpClient()
 private val mediaType = "application/json; charset=utf-8".toMediaType()
 
-val TAG = "LedClient.Lib"
+const val TAG = "LedClient.Lib"
 
 /**
  * @param serverUrl the complete http url of the LEDserver (incl. port)
