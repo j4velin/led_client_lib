@@ -3,6 +3,7 @@ package de.j4velin.ledclient.lib
 import android.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -40,21 +41,41 @@ class ToJson {
 
         assertTrue(json.has("color"))
         assertTrue(json.get("color").isJsonArray)
-        val color = json.getAsJsonArray("color");
-        assertEquals(3, color.size())
-        assertTrue(color[0].isJsonPrimitive)
-        assertTrue(color[0].asJsonPrimitive.isNumber)
-        assertTrue(color[1].isJsonPrimitive)
-        assertTrue(color[1].asJsonPrimitive.isNumber)
-        assertTrue(color[2].isJsonPrimitive)
-        assertTrue(color[2].asJsonPrimitive.isNumber)
-        assertEquals(Color.red(Color.CYAN), color[0].asInt)
-        assertEquals(Color.green(Color.CYAN), color[1].asInt)
-        assertEquals(Color.blue(Color.CYAN), color[2].asInt)
+        val color = arrayToColor(json.getAsJsonArray("color"))
+        assertEquals(Color.CYAN, color)
 
         assertTrue(json.has("flashes"))
         assertTrue(json.get("flashes").isJsonPrimitive)
         assertTrue(json.getAsJsonPrimitive("flashes").isNumber)
         assertEquals(42, json.getAsJsonPrimitive("flashes").asInt)
+    }
+}
+
+@RunWith(Parameterized::class)
+class ColorConversion(private val expected: Int) {
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters
+        fun data(): Collection<Int> {
+            return listOf(
+                Color.RED,
+                Color.GREEN,
+                Color.BLUE,
+                Color.BLACK,
+                Color.WHITE,
+                Color.CYAN,
+                Color.LTGRAY
+            )
+        }
+    }
+
+    @Test
+    fun toAndFromArray() {
+        // skip 'transparent'
+        Assume.assumeTrue(Color.alpha(expected) == 0xFF)
+        assertEquals(
+            expected,
+            arrayToColor(colorToArray(expected))
+        )
     }
 }
