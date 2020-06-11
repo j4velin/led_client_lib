@@ -5,7 +5,7 @@ apply plugin: 'kotlin-kapt'
 apply plugin: 'maven-publish'
 apply plugin: "com.jfrog.bintray"
 
-def versionStr = "1.0.4"
+def versionStr = "1.1.0"
 def libName = 'LedClientLib'
 def siteUrl = 'https://github.com/j4velin/led_client_lib'       // Homepage URL of the library
 def gitUrl = 'https://github.com/j4velin/led_client_lib.git'    // Git repository URL
@@ -127,7 +127,7 @@ if (rootProject.file("local.properties").exists()) {
 // https://github.com/bintray/gradle-bintray-plugin
 version = versionStr
 bintray {
-    dryRun = false
+    dryRun = true
     user = properties.getProperty("bintray.user")
     key = properties.getProperty("bintray.apikey")
 

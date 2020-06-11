@@ -20,7 +20,6 @@ import kotlin.reflect.full.createType
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.declaredMembers
 import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.typeOf
 
 interface Callback {
     fun configurationResult(effect: LedEffect)
@@ -219,8 +218,7 @@ class UiDialog(
     private fun isFloatingPoint(c: KType) =
         c == Float::class.createType() || c == Double::class.createType()
 
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun isNumberType(type: KType) = type.isSubtypeOf(typeOf<Number>())
+    private fun isNumberType(type: KType) = type.isSubtypeOf(Number::class.createType())
 }
 
 
