@@ -3,6 +3,7 @@ package de.j4velin.ledclient.lib
 import android.graphics.Color
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.companionObjectInstance
@@ -29,7 +30,7 @@ abstract class LedEffect {
      *
      * @return the json representation of this effect
      */
-    open fun toJSON(): JsonObject {
+    internal open fun toJSON(): JsonObject {
         val json = JsonObject()
         for (f in javaClass.declaredFields) {
             f.isAccessible = true
@@ -48,13 +49,20 @@ abstract class LedEffect {
         return json
     }
 
+    /**
+     * The effect's properties in json representation.
+     *
+     * @return the json representation of this effect's properties
+     */
+    fun toJsonString(): String = toJSON().toString()
+
     companion object {
         /**
          * Creates an effect object from the given properties
          * @param name the name of the effect, must be one of the NAME constants of each effect class
          * @param json a json object containing the properties for the effect
          */
-        fun fromJson(name: String, json: JsonObject): LedEffect {
+        internal fun fromJson(name: String, json: JsonObject): LedEffect {
             for (e in getEffects()) {
                 if (e.simpleName.equals(name, true)) {
                     val m = e.companionObject!!.java.getDeclaredMethod(
@@ -67,8 +75,16 @@ abstract class LedEffect {
             throw IllegalArgumentException("No such effect: $name")
         }
 
-        fun getEffects(): Array<KClass<out LedEffect>> =
+        internal fun getEffects(): Array<KClass<out LedEffect>> =
             arrayOf(Flash::class, Snake::class, Kitt::class)
+
+        /**
+         * Creates an effect object from the given json properties
+         * @param name the name of the effect, must be one of the NAME constants of each effect class
+         * @param json a json string containing the properties for the effect
+         */
+        fun fromJsonString(name: String, json: String): LedEffect =
+            fromJson(name, JsonParser().parse(json).asJsonObject)
     }
 }
 
@@ -78,7 +94,7 @@ abstract class LedEffect {
  * @param color the color
  * @return a rgb color array which can be sent to the LEDserver
  */
-private fun colorToArray(color: Int): JsonArray {
+internal fun colorToArray(color: Int): JsonArray {
     val array = JsonArray()
     array.add(Color.red(color))
     array.add(Color.green(color))
@@ -92,7 +108,7 @@ private fun colorToArray(color: Int): JsonArray {
  * @param array the rgb array
  * @return an int value describing that color
  */
-private fun arrayToColor(array: JsonArray): Int =
+internal fun arrayToColor(array: JsonArray): Int =
     Color.rgb(array[0].asInt, array[1].asInt, array[2].asInt)
 
 data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val flashes: Int = 1) :
