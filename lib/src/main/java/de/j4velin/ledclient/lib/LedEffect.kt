@@ -3,18 +3,22 @@ package de.j4velin.ledclient.lib
 import android.graphics.Color
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-
-const val EFFECT_NAME_FLASH = "flash"
-const val EFFECT_NAME_SNAKE = "snake"
-const val EFFECT_NAME_KITT = "kitt"
+import kotlin.reflect.KClass
+import kotlin.reflect.full.companionObject
+import kotlin.reflect.full.companionObjectInstance
 
 /**
  * Base class for all effect.
  *
- * @param name the effect name. The name must be equal to the effect name in the LEDserver
- * instance (e.g. effect_kitt.py --> effect name = "kitt")
+ * All concrete subclasses MUST have a companion object with a "fromJSON" method, taking a JsonObject
+ * as parameter and returning an instance of the class itself.
+ *
+ * The subclasses MUST be named like the corresponding effect file is called on the LEDserver instance
+ * (e.g. effect_kitt.py --> effect class name = "Kitt", case-insensitive)
  */
-abstract class LedEffect(val name: String) {
+abstract class LedEffect {
+
+    val name = this::class.java.simpleName.toLowerCase()
 
     /**
      * The effect in json representation. The default implementation serializes all int, bool and string
@@ -45,13 +49,26 @@ abstract class LedEffect(val name: String) {
     }
 
     companion object {
-        fun fromJson(name: String, json: JsonObject) =
-            when (name.toLowerCase()) {
-                EFFECT_NAME_FLASH -> Flash.fromJSON(json)
-                EFFECT_NAME_SNAKE -> Snake.fromJSON(json)
-                EFFECT_NAME_KITT -> Kitt.fromJSON(json)
-                else -> throw IllegalArgumentException("No known effect: $name")
+        /**
+         * Creates an effect object from the given properties
+         * @param name the name of the effect, must be one of the NAME constants of each effect class
+         * @param json a json object containing the properties for the effect
+         */
+        fun fromJson(name: String, json: JsonObject): LedEffect {
+            for (e in getEffects()) {
+                if (e.simpleName.equals(name, true)) {
+                    val m = e.companionObject!!.java.getDeclaredMethod(
+                        "fromJSON",
+                        JsonObject::class.java
+                    )
+                    return m.invoke(e.companionObjectInstance, json) as LedEffect
+                }
             }
+            throw IllegalArgumentException("No such effect: $name")
+        }
+
+        fun getEffects(): Array<KClass<out LedEffect>> =
+            arrayOf(Flash::class, Snake::class, Kitt::class)
     }
 }
 
@@ -61,7 +78,7 @@ abstract class LedEffect(val name: String) {
  * @param color the color
  * @return a rgb color array which can be sent to the LEDserver
  */
-fun colorToArray(color: Int): JsonArray {
+private fun colorToArray(color: Int): JsonArray {
     val array = JsonArray()
     array.add(Color.red(color))
     array.add(Color.green(color))
@@ -75,10 +92,11 @@ fun colorToArray(color: Int): JsonArray {
  * @param array the rgb array
  * @return an int value describing that color
  */
-fun arrayToColor(array: JsonArray): Int = Color.rgb(array[0].asInt, array[1].asInt, array[2].asInt)
+private fun arrayToColor(array: JsonArray): Int =
+    Color.rgb(array[0].asInt, array[1].asInt, array[2].asInt)
 
 data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val flashes: Int = 1) :
-    LedEffect(EFFECT_NAME_FLASH) {
+    LedEffect() {
 
     companion object {
         fun fromJSON(json: JsonObject) =
@@ -93,7 +111,7 @@ data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val flashe
 }
 
 data class Snake(val color: Int = Color.RED, val delay: Float = 0.2f, val length: Int = 10) :
-    LedEffect(EFFECT_NAME_SNAKE) {
+    LedEffect() {
 
     companion object {
         fun fromJSON(json: JsonObject) =
@@ -112,8 +130,7 @@ data class Kitt(
     val delay: Float = 0.2f,
     val length: Int = 10,
     val loops: Int = 1
-) :
-    LedEffect(EFFECT_NAME_KITT) {
+) : LedEffect() {
 
     companion object {
         fun fromJSON(json: JsonObject) =
