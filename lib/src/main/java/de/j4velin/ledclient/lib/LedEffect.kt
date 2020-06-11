@@ -3,7 +3,6 @@ package de.j4velin.ledclient.lib
 import android.graphics.Color
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import de.j4velin.ledclient.lib.persist.EffectDao
 
 const val EFFECT_NAME_FLASH = "flash"
 const val EFFECT_NAME_SNAKE = "snake"
@@ -18,9 +17,32 @@ const val EFFECT_NAME_KITT = "kitt"
 abstract class LedEffect(val name: String) {
 
     /**
+     * The effect in json representation. The default implementation serializes all int, bool and string
+     * properties (property name as key in the json object) with a special handling for an int 'color'
+     * property: This properties is serialized as a (int) array (rgb representation).
+     *
+     * For any other property types, this method must be overwritten by the concrete subclass
+     *
      * @return the json representation of this effect
      */
-    abstract fun toJSON(): JsonObject
+    open fun toJSON(): JsonObject {
+        val json = JsonObject()
+        for (f in javaClass.declaredFields) {
+            f.isAccessible = true
+            val value = f.get(this)
+            // special handling for 'color' field: This usually must be serialized as RGB array
+            if (f.name.equals("color", true) && value is Int) {
+                json.add(f.name, colorToArray(value))
+            } else {
+                when (value) {
+                    is Number -> json.addProperty(f.name, value)
+                    is Boolean -> json.addProperty(f.name, value)
+                    is String -> json.addProperty(f.name, value)
+                }
+            }
+        }
+        return json
+    }
 
     companion object {
         fun fromJson(name: String, json: JsonObject) =
@@ -55,15 +77,8 @@ fun colorToArray(color: Int): JsonArray {
  */
 fun arrayToColor(array: JsonArray): Int = Color.rgb(array[0].asInt, array[1].asInt, array[2].asInt)
 
-data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val times: Int = 1) :
+data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val flashes: Int = 1) :
     LedEffect(EFFECT_NAME_FLASH) {
-    override fun toJSON(): JsonObject {
-        val json = JsonObject()
-        json.addProperty("delay", delay)
-        json.addProperty("flashes", times)
-        json.add("color", colorToArray(color))
-        return json
-    }
 
     companion object {
         fun fromJSON(json: JsonObject) =
@@ -79,13 +94,6 @@ data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val times:
 
 data class Snake(val color: Int = Color.RED, val delay: Float = 0.2f, val length: Int = 10) :
     LedEffect(EFFECT_NAME_SNAKE) {
-    override fun toJSON(): JsonObject {
-        val json = JsonObject()
-        json.addProperty("delay", delay)
-        json.addProperty("length", length)
-        json.add("color", colorToArray(color))
-        return json
-    }
 
     companion object {
         fun fromJSON(json: JsonObject) =
@@ -106,14 +114,6 @@ data class Kitt(
     val loops: Int = 1
 ) :
     LedEffect(EFFECT_NAME_KITT) {
-    override fun toJSON(): JsonObject {
-        val json = JsonObject()
-        json.addProperty("delay", delay)
-        json.addProperty("length", length)
-        json.addProperty("loops", loops)
-        json.add("color", colorToArray(color))
-        return json
-    }
 
     companion object {
         fun fromJSON(json: JsonObject) =
