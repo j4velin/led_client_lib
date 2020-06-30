@@ -4,15 +4,22 @@ import android.graphics.Color
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.JsonPrimitive
 import kotlin.reflect.KClass
+import kotlin.reflect.KClassifier
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.companionObjectInstance
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * Base class for all effect.
  *
- * All concrete subclasses MUST have a companion object with a "fromJSON" method, taking a JsonObject
- * as parameter and returning an instance of the class itself.
+ * All concrete subclasses can have a companion object with a "fromJSON" method, taking a JsonObject
+ * as parameter and returning an instance of the class itself. If the subclass does not provide such
+ * a method, the object instance is tried to be created from the json object in a generic way: For
+ * this to work, the subclass needs a primary constructor and only require primitive properties as
+ * the constructor parameters (which must be present in the json or the class must provide default
+ * values).
  *
  * The subclasses MUST be named like the corresponding effect file is called on the LEDserver instance
  * (e.g. effect_kitt.py --> effect class name = "Kitt", case-insensitive)
@@ -65,11 +72,36 @@ abstract class LedEffect {
         internal fun fromJson(name: String, json: JsonObject): LedEffect {
             for (e in getEffects()) {
                 if (e.simpleName.equals(name, true)) {
-                    val m = e.companionObject!!.java.getDeclaredMethod(
-                        "fromJSON",
-                        JsonObject::class.java
-                    )
-                    return m.invoke(e.companionObjectInstance, json) as LedEffect
+                    val companion = e.companionObject
+                    if (companion != null) {
+                        try {
+                            val m = companion.java.getDeclaredMethod(
+                                "fromJSON",
+                                JsonObject::class.java
+                            )
+                            return m.invoke(e.companionObjectInstance, json) as LedEffect
+                        } catch (e: NoSuchMethodException) {
+                            // ignore
+                        }
+                    }
+                    // try generic approach
+                    val ctor = e.primaryConstructor
+                    if (ctor != null) {
+                        val ctorValuesMap =
+                            ctor.parameters.asSequence().filter { json.has(it.name) }
+                                .map {
+                                    // special handling for 'color' property
+                                    if (it.name.equals("color", true)) {
+                                        it to arrayToColor(json.getAsJsonArray(it.name))
+                                    } else {
+                                        it to getValue(
+                                            json.getAsJsonPrimitive(it.name),
+                                            it.type.classifier
+                                        )
+                                    }
+                                }.toMap()
+                        return ctor.callBy(ctorValuesMap)
+                    }
                 }
             }
             throw IllegalArgumentException("No such effect: $name")
@@ -85,8 +117,29 @@ abstract class LedEffect {
          */
         fun fromJsonString(name: String, json: String): LedEffect =
             fromJson(name, JsonParser().parse(json).asJsonObject)
+
+        /**
+         * Internal helper method to convert a json primitive to the correct primitive Kotlin object
+         */
+        private fun getValue(json: JsonPrimitive, classifier: KClassifier?): Any {
+            if (classifier is KClass<*>) {
+                return when (classifier) {
+                    Int::class -> json.asInt
+                    Float::class -> json.asFloat
+                    String::class -> json.asString
+                    Double::class -> json.asDouble
+                    Boolean::class -> json.asBoolean
+                    Byte::class -> json.asByte
+                    Short::class -> json.asShort
+                    Long::class -> json.asLong
+                    else -> throw IllegalArgumentException("Unknown type: ${classifier.qualifiedName}")
+                }
+            }
+            throw IllegalArgumentException("Not a KClass: $classifier")
+        }
     }
 }
+
 
 /**
  * Converts the given color into a rgb color array
@@ -112,51 +165,14 @@ internal fun arrayToColor(array: JsonArray): Int =
     Color.rgb(array[0].asInt, array[1].asInt, array[2].asInt)
 
 data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val flashes: Int = 1) :
-    LedEffect() {
-
-    companion object {
-        fun fromJSON(json: JsonObject) =
-            Flash(
-                arrayToColor(
-                    json.getAsJsonArray("color")
-                ),
-                json.getAsJsonPrimitive("delay").asFloat,
-                json.getAsJsonPrimitive("flashes").asInt
-            )
-    }
-}
+    LedEffect()
 
 data class Snake(val color: Int = Color.RED, val delay: Float = 0.2f, val length: Int = 10) :
-    LedEffect() {
-
-    companion object {
-        fun fromJSON(json: JsonObject) =
-            Snake(
-                arrayToColor(
-                    json.getAsJsonArray("color")
-                ),
-                json.getAsJsonPrimitive("delay").asFloat,
-                json.getAsJsonPrimitive("length").asInt
-            )
-    }
-}
+    LedEffect()
 
 data class Kitt(
     val color: Int = Color.RED,
     val delay: Float = 0.2f,
     val length: Int = 10,
     val loops: Int = 1
-) : LedEffect() {
-
-    companion object {
-        fun fromJSON(json: JsonObject) =
-            Kitt(
-                arrayToColor(
-                    json.getAsJsonArray("color")
-                ),
-                json.getAsJsonPrimitive("delay").asFloat,
-                json.getAsJsonPrimitive("length").asInt,
-                json.getAsJsonPrimitive("loops").asInt
-            )
-    }
-}
+) : LedEffect()
