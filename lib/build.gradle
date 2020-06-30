@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'maven-publish'
-apply plugin: "com.jfrog.bintray"
+apply plugin: 'com.jfrog.bintray'
 
 def versionStr = "1.1.0"
 def libName = 'LedClientLib'
@@ -13,7 +13,7 @@ def group = "de.j4velin.LedClientLib"                           // Maven Group I
 
 android {
     compileSdkVersion 29
-    buildToolsVersion "29.0.2"
+    buildToolsVersion "29.0.3"
 
     defaultConfig {
         minSdkVersion 15
