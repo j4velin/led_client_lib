@@ -12,6 +12,12 @@ import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.full.primaryConstructor
 
 /**
+ * The list of all effects
+ */
+internal val effects: Array<KClass<out LedEffect>> =
+    arrayOf(Flash::class, Snake::class, Kitt::class)
+
+/**
  * Base class for all effect.
  *
  * All concrete subclasses can have a companion object with a "fromJSON" method, taking a JsonObject
@@ -29,9 +35,9 @@ abstract class LedEffect {
     val name = this::class.java.simpleName.toLowerCase()
 
     /**
-     * The effect in json representation. The default implementation serializes all int, bool and string
-     * properties (property name as key in the json object) with a special handling for an int 'color'
-     * property: This properties is serialized as a (int) array (rgb representation).
+     * The effect in json representation. The default implementation serializes all number, bool and
+     * string properties (property name as key in the json object) with a special handling for an int
+     * 'color' property: This properties is serialized as a (int) array (rgb representation).
      *
      * For any other property types, this method must be overwritten by the concrete subclass
      *
@@ -70,7 +76,7 @@ abstract class LedEffect {
          * @param json a json object containing the properties for the effect
          */
         internal fun fromJson(name: String, json: JsonObject): LedEffect {
-            for (e in getEffects()) {
+            for (e in effects) {
                 if (e.simpleName.equals(name, true)) {
                     val companion = e.companionObject
                     if (companion != null) {
@@ -106,9 +112,6 @@ abstract class LedEffect {
             }
             throw IllegalArgumentException("No such effect: $name")
         }
-
-        internal fun getEffects(): Array<KClass<out LedEffect>> =
-            arrayOf(Flash::class, Snake::class, Kitt::class)
 
         /**
          * Creates an effect object from the given json properties
@@ -163,16 +166,3 @@ internal fun colorToArray(color: Int): JsonArray {
  */
 internal fun arrayToColor(array: JsonArray): Int =
     Color.rgb(array[0].asInt, array[1].asInt, array[2].asInt)
-
-data class Flash(val color: Int = Color.RED, val delay: Float = 0.2f, val flashes: Int = 1) :
-    LedEffect()
-
-data class Snake(val color: Int = Color.RED, val delay: Float = 0.2f, val length: Int = 10) :
-    LedEffect()
-
-data class Kitt(
-    val color: Int = Color.RED,
-    val delay: Float = 0.2f,
-    val length: Int = 10,
-    val loops: Int = 1
-) : LedEffect()

@@ -46,7 +46,6 @@ class UiDialog(
         table.setPadding(padding, padding, padding, padding)
         val spinner = Spinner(context)
 
-        val effects = LedEffect.getEffects()
         val spinnerRow = getSpinnerRow(spinner, effects.map { it.simpleName!! })
 
         table.addView(spinnerRow)
